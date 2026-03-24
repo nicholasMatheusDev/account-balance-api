@@ -34,7 +34,6 @@ Project board:
 
 ## Architecture used
 
-- HTTP: Controllers validate input and delegate to use cases
-- Application: Use cases with business rules
-- Domain: `AccountRepositoryInterface` defines persistence operations
-- Infrastructure: `JsonFileAccountRepository` persists state in `storage/app/ebanx_state.json`
+- HTTP: Controllers validate input and delegate to services
+- Services: Business rules for balance lookup, event processing, reset, idempotency and transaction rules
+- Repositories: `AccountRepositoryInterface` and `JsonFileAccountRepository` handle state access in `storage/app/ebanx_state.json`
