@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Application;
+namespace App\Services;
 
-use App\Application\Results\BalanceResult;
-use App\Domain\AccountRepositoryInterface;
+use App\Repositories\AccountRepositoryInterface;
+use App\Services\Results\BalanceResult;
 
-class GetBalance
+class GetBalanceService
 {
     public function __construct(private readonly AccountRepositoryInterface $accounts)
     {

@@ -118,4 +118,94 @@ class FileStateTest extends TestCase
             ->assertOk()
             ->assertSeeText('10');
     }
+
+    public function test_withdraw_with_insufficient_funds_returns_error_and_keeps_balance(): void
+    {
+        $this->post('/reset')->assertOk();
+
+        $this->postJson('/event', [
+            'type' => 'deposit',
+            'destination' => '100',
+            'amount' => 10,
+        ])->assertCreated();
+
+        $this->postJson('/event', [
+            'type' => 'withdraw',
+            'origin' => '100',
+            'amount' => 20,
+        ])->assertStatus(422)
+            ->assertJson([
+                'error' => 'insufficient_funds',
+            ]);
+
+        $this->get('/balance?account_id=100')
+            ->assertOk()
+            ->assertSeeText('10');
+    }
+
+    public function test_transfer_with_insufficient_funds_returns_error_and_keeps_balances(): void
+    {
+        $this->post('/reset')->assertOk();
+
+        $this->postJson('/event', [
+            'type' => 'deposit',
+            'destination' => '100',
+            'amount' => 10,
+        ])->assertCreated();
+
+        $this->postJson('/event', [
+            'type' => 'transfer',
+            'origin' => '100',
+            'destination' => '200',
+            'amount' => 20,
+        ])->assertStatus(422)
+            ->assertJson([
+                'error' => 'insufficient_funds',
+            ]);
+
+        $this->get('/balance?account_id=100')
+            ->assertOk()
+            ->assertSeeText('10');
+
+        $this->get('/balance?account_id=200')
+            ->assertStatus(404)
+            ->assertSeeText('0');
+    }
+
+    public function test_idempotent_withdraw_with_insufficient_funds_is_replayed_without_changing_balance(): void
+    {
+        $this->post('/reset')->assertOk();
+
+        $this->postJson('/event', [
+            'type' => 'deposit',
+            'destination' => '100',
+            'amount' => 10,
+        ])->assertCreated();
+
+        $headers = [
+            'Idempotency-Key' => 'withdraw-insufficient-1',
+        ];
+
+        $payload = [
+            'type' => 'withdraw',
+            'origin' => '100',
+            'amount' => 20,
+        ];
+
+        $this->withHeaders($headers)->postJson('/event', $payload)
+            ->assertStatus(422)
+            ->assertJson([
+                'error' => 'insufficient_funds',
+            ]);
+
+        $this->withHeaders($headers)->postJson('/event', $payload)
+            ->assertStatus(422)
+            ->assertJson([
+                'error' => 'insufficient_funds',
+            ]);
+
+        $this->get('/balance?account_id=100')
+            ->assertOk()
+            ->assertSeeText('10');
+    }
 }

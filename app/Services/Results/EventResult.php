@@ -1,12 +1,13 @@
 <?php
 
-namespace App\Application\Results;
+namespace App\Services\Results;
 
 class EventResult
 {
     public const STATUS_CREATED = 'created';
     public const STATUS_NOT_FOUND = 'not_found';
     public const STATUS_CONFLICT = 'conflict';
+    public const STATUS_INSUFFICIENT_FUNDS = 'insufficient_funds';
 
     public function __construct(
         public readonly string $status,
@@ -27,6 +28,13 @@ class EventResult
     public static function conflict(array $payload): self
     {
         return new self(self::STATUS_CONFLICT, $payload);
+    }
+
+    public static function insufficientFunds(): self
+    {
+        return new self(self::STATUS_INSUFFICIENT_FUNDS, [
+            'error' => 'insufficient_funds',
+        ]);
     }
 
     public static function fromStored(string $status, array $payload): self

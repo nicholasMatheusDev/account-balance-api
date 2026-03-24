@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Application\ResetState;
+use App\Services\ResetStateService;
 
 class ResetController extends Controller
 {
-    public function __invoke(ResetState $useCase)
+    public function __invoke(ResetStateService $service)
     {
-        $useCase->handle();
+        $service->handle();
 
         return response('OK', 200)->header('Content-Type', 'text/plain');
     }

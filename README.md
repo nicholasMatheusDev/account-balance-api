@@ -26,10 +26,15 @@ php artisan serve
 ngrok http 8000
 ```
 
+## Trello
+
+Project board:
+
+[Kanban Balance API](https://trello.com/invite/b/69c2ba5005a8556f5df390dc/ATTI59bd643bc2f184bd6ad58345420ced20BB3E9F8F/kanban-balance-api)
+
 ## Architecture used
 
 - HTTP: Controllers validate input and delegate to use cases
 - Application: Use cases with business rules
 - Domain: `AccountRepositoryInterface` defines persistence operations
 - Infrastructure: `JsonFileAccountRepository` persists state in `storage/app/ebanx_state.json`
-

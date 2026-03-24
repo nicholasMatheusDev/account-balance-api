@@ -2,7 +2,7 @@
 
 namespace Tests\Unit;
 
-use App\Infrastructure\JsonFileAccountRepository;
+use App\Repositories\JsonFileAccountRepository;
 use PHPUnit\Framework\TestCase;
 
 class JsonFileAccountRepositoryTest extends TestCase
@@ -73,6 +73,18 @@ class JsonFileAccountRepositoryTest extends TestCase
         $this->assertNull($result);
     }
 
+    public function test_withdraw_with_insufficient_funds_returns_null_and_keeps_balance(): void
+    {
+        $repo = $this->freshRepo();
+
+        $repo->deposit('100', 10);
+
+        $result = $repo->withdraw('100', 15);
+
+        $this->assertNull($result);
+        $this->assertSame(10, $repo->getBalance('100'));
+    }
+
     public function test_transfer_creates_destination_if_missing(): void
     {
         $repo = $this->freshRepo();
@@ -93,6 +105,19 @@ class JsonFileAccountRepositoryTest extends TestCase
 
         $this->assertNull($result);
         $this->assertNull($repo->getBalance('missing'));
+        $this->assertNull($repo->getBalance('200'));
+    }
+
+    public function test_transfer_with_insufficient_funds_returns_null_and_keeps_balances(): void
+    {
+        $repo = $this->freshRepo();
+
+        $repo->deposit('100', 10);
+
+        $result = $repo->transfer('100', '200', 15);
+
+        $this->assertNull($result);
+        $this->assertSame(10, $repo->getBalance('100'));
         $this->assertNull($repo->getBalance('200'));
     }
 

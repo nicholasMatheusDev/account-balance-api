@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Application\ProcessEvent;
-use App\Application\Results\EventResult;
+use App\Services\ProcessEventService;
+use App\Services\Results\EventResult;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class EventController extends Controller
 {
-    public function __invoke(Request $request, ProcessEvent $useCase)
+    public function __invoke(Request $request, ProcessEventService $service)
     {
         $payload = $request->validate([
             'type' => ['required', 'string', Rule::in(['deposit', 'withdraw', 'transfer'])],
@@ -18,7 +18,7 @@ class EventController extends Controller
             'amount' => ['required', 'integer', 'min:0'],
         ]);
 
-        $result = $useCase->handle($payload, $request->header('Idempotency-Key'));
+        $result = $service->handle($payload, $request->header('Idempotency-Key'));
 
         if ($result->status === EventResult::STATUS_NOT_FOUND) {
             return response('0', 404)->header('Content-Type', 'text/plain');
@@ -26,6 +26,10 @@ class EventController extends Controller
 
         if ($result->status === EventResult::STATUS_CONFLICT) {
             return response()->json($result->payload, 409);
+        }
+
+        if ($result->status === EventResult::STATUS_INSUFFICIENT_FUNDS) {
+            return response()->json($result->payload, 422);
         }
 
         return response()->json($result->payload, 201);

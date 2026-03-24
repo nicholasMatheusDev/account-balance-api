@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Application\Results;
+namespace App\Services\Results;
 
 class BalanceResult
 {
