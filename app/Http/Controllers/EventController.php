@@ -9,7 +9,7 @@ use Illuminate\Validation\Rule;
 
 class EventController extends Controller
 {
-    public function __invoke(Request $request, ProcessEventService $service)
+    public function __invoke(Request $request, ProcessEventService $events)
     {
         $payload = $request->validate([
             'type' => ['required', 'string', Rule::in(['deposit', 'withdraw', 'transfer'])],
@@ -18,20 +18,13 @@ class EventController extends Controller
             'amount' => ['required', 'integer', 'min:0'],
         ]);
 
-        $result = $service->handle($payload, $request->header('Idempotency-Key'));
+        $result = $events->handle($payload, $request->header('Idempotency-Key'));
 
-        if ($result->status === EventResult::STATUS_NOT_FOUND) {
-            return response('0', 404)->header('Content-Type', 'text/plain');
-        }
-
-        if ($result->status === EventResult::STATUS_CONFLICT) {
-            return response()->json($result->payload, 409);
-        }
-
-        if ($result->status === EventResult::STATUS_INSUFFICIENT_FUNDS) {
-            return response()->json($result->payload, 422);
-        }
-
-        return response()->json($result->payload, 201);
+        return match ($result->status) {
+            EventResult::STATUS_NOT_FOUND => response('0', 404)->header('Content-Type', 'text/plain'),
+            EventResult::STATUS_CONFLICT => response()->json($result->payload, 409),
+            EventResult::STATUS_INSUFFICIENT_FUNDS => response()->json($result->payload, 422),
+            default => response()->json($result->payload, 201),
+        };
     }
 }

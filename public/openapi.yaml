@@ -1,0 +1,264 @@
+openapi: 3.0.3
+info:
+  title: Balance API
+  version: 1.0.0
+  description: |
+    Simple financial API for balance lookup, reset, and event processing.
+
+    Supported event types:
+    - deposit
+    - withdraw
+    - transfer
+
+servers:
+  - url: /
+    description: Current host
+
+tags:
+  - name: Balance
+  - name: Events
+  - name: State
+
+paths:
+  /balance:
+    get:
+      tags:
+        - Balance
+      summary: Get account balance
+      parameters:
+        - name: account_id
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "100"
+      responses:
+        '200':
+          description: Account balance found
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: "20"
+        '404':
+          description: Account not found
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: "0"
+
+  /reset:
+    post:
+      tags:
+        - State
+      summary: Reset all in-memory state
+      responses:
+        '200':
+          description: State reset
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: OK
+
+  /event:
+    post:
+      tags:
+        - Events
+      summary: Process an account event
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          description: Prevents duplicate processing of the same event payload
+          schema:
+            type: string
+          example: deposit-100-1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/DepositEvent'
+                - $ref: '#/components/schemas/WithdrawEvent'
+                - $ref: '#/components/schemas/TransferEvent'
+            examples:
+              deposit:
+                value:
+                  type: deposit
+                  destination: "100"
+                  amount: 10
+              withdraw:
+                value:
+                  type: withdraw
+                  origin: "100"
+                  amount: 5
+              transfer:
+                value:
+                  type: transfer
+                  origin: "100"
+                  destination: "200"
+                  amount: 15
+      responses:
+        '201':
+          description: Event processed
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/DepositResponse'
+                  - $ref: '#/components/schemas/WithdrawResponse'
+                  - $ref: '#/components/schemas/TransferResponse'
+              examples:
+                deposit:
+                  value:
+                    destination:
+                      id: "100"
+                      balance: 10
+                withdraw:
+                  value:
+                    origin:
+                      id: "100"
+                      balance: 5
+                transfer:
+                  value:
+                    origin:
+                      id: "100"
+                      balance: 5
+                    destination:
+                      id: "200"
+                      balance: 15
+        '404':
+          description: Origin account not found
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: "0"
+        '409':
+          description: Idempotency key reused with a different payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: idempotency_key_conflict
+        '422':
+          description: Insufficient funds
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: insufficient_funds
+
+components:
+  schemas:
+    DepositEvent:
+      type: object
+      required:
+        - type
+        - destination
+        - amount
+      properties:
+        type:
+          type: string
+          enum: [deposit]
+        destination:
+          type: string
+          example: "100"
+        amount:
+          type: integer
+          minimum: 0
+          example: 10
+
+    WithdrawEvent:
+      type: object
+      required:
+        - type
+        - origin
+        - amount
+      properties:
+        type:
+          type: string
+          enum: [withdraw]
+        origin:
+          type: string
+          example: "100"
+        amount:
+          type: integer
+          minimum: 0
+          example: 5
+
+    TransferEvent:
+      type: object
+      required:
+        - type
+        - origin
+        - destination
+        - amount
+      properties:
+        type:
+          type: string
+          enum: [transfer]
+        origin:
+          type: string
+          example: "100"
+        destination:
+          type: string
+          example: "200"
+        amount:
+          type: integer
+          minimum: 0
+          example: 15
+
+    AccountBalance:
+      type: object
+      required:
+        - id
+        - balance
+      properties:
+        id:
+          type: string
+        balance:
+          type: integer
+
+    DepositResponse:
+      type: object
+      required:
+        - destination
+      properties:
+        destination:
+          $ref: '#/components/schemas/AccountBalance'
+
+    WithdrawResponse:
+      type: object
+      required:
+        - origin
+      properties:
+        origin:
+          $ref: '#/components/schemas/AccountBalance'
+
+    TransferResponse:
+      type: object
+      required:
+        - origin
+        - destination
+      properties:
+        origin:
+          $ref: '#/components/schemas/AccountBalance'
+        destination:
+          $ref: '#/components/schemas/AccountBalance'
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          enum:
+            - idempotency_key_conflict
+            - insufficient_funds
